@@ -2,6 +2,8 @@
 
 namespace Spatie\GuzzleRateLimiterMiddleware;
 
+use Psr\Http\Message\RequestInterface;
+
 interface Store
 {
     public function get(): array;

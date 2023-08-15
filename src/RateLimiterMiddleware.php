@@ -14,7 +14,10 @@ class RateLimiterMiddleware
         $this->rateLimiter = $rateLimiter;
     }
 
-    public static function perSecond(int $limit, Store $store = null, Deferrer $deferrer = null): RateLimiterMiddleware
+    /**
+     * @param Store|callable $store = null
+     */
+    public static function perSecond(int $limit, $store = null, Deferrer $deferrer = null): RateLimiterMiddleware
     {
         $rateLimiter = new RateLimiter(
             $limit,
@@ -27,7 +30,10 @@ class RateLimiterMiddleware
         return new static($rateLimiter);
     }
 
-    public static function perMinute(int $limit, Store $store = null, Deferrer $deferrer = null): RateLimiterMiddleware
+    /**
+     * @param Store|callable $store = null
+     */
+    public static function perMinute(int $limit, $store = null, Deferrer $deferrer = null): RateLimiterMiddleware
     {
         $rateLimiter = new RateLimiter(
             $limit,
@@ -40,7 +46,10 @@ class RateLimiterMiddleware
         return new static($rateLimiter);
     }
 
-    public static function custom(int $limit, int $timeInterval, string $timeUnit, Store $store = null, Deferrer $deferrer = null): RateLimiterMiddleware
+    /**
+     * @param Store|callable $store = null
+     */
+    public static function custom(int $limit, int $timeInterval, string $timeUnit, $store = null, Deferrer $deferrer = null): RateLimiterMiddleware
     {
         $rateLimiter = new RateLimiter(
             $limit,
@@ -56,7 +65,7 @@ class RateLimiterMiddleware
     public function __invoke(callable $handler)
     {
         return function (RequestInterface $request, array $options) use ($handler) {
-            return $this->rateLimiter->handle(function () use ($request, $handler, $options) {
+            return $this->rateLimiter->handle($request, $options, function () use ($request, $handler, $options) {
                 return $handler($request, $options);
             });
         };
