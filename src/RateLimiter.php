@@ -2,6 +2,8 @@
 
 namespace Spatie\GuzzleRateLimiterMiddleware;
 
+use Psr\Http\Message\RequestInterface;
+
 class RateLimiter
 {
     const TIME_FRAME_MINUTE = 'minute';
@@ -13,16 +15,19 @@ class RateLimiter
     /** @var string */
     protected $timeFrame;
 
-    /** @var \Spatie\RateLimiter\Store */
+    /** @var \Spatie\RateLimiter\Store|callable */
     protected $store;
 
     /** @var \Spatie\GuzzleRateLimiterMiddleware\Deferrer */
     protected $deferrer;
 
+    /**
+     * @param Store|callable $store
+     */
     public function __construct(
         int $limit,
         string $timeFrame,
-        Store $store,
+        $store,
         Deferrer $deferrer
     ) {
         $this->limit = $limit;
@@ -31,15 +36,15 @@ class RateLimiter
         $this->deferrer = $deferrer;
     }
 
-    public function handle(callable $callback)
+    public function handle(RequestInterface $request, array $options, callable $callback)
     {
-        $delayUntilNextRequest = $this->delayUntilNextRequest();
+        $delayUntilNextRequest = $this->delayUntilNextRequest($request, $options);
 
         if ($delayUntilNextRequest > 0) {
             $this->deferrer->sleep($delayUntilNextRequest);
         }
 
-        $this->store->push(
+        $this->getStore($request, $options)->push(
             $this->deferrer->getCurrentTime(),
             $this->limit
         );
@@ -47,12 +52,12 @@ class RateLimiter
         return $callback();
     }
 
-    protected function delayUntilNextRequest(): int
+    protected function delayUntilNextRequest(RequestInterface $request, array $options): int
     {
         $currentTimeFrameStart = $this->deferrer->getCurrentTime() - $this->timeFrameLengthInMilliseconds();
 
         $requestsInCurrentTimeFrame = array_values(array_filter(
-            $this->store->get(),
+            $this->getStore($request, $options)->get(),
             function (int $timestamp) use ($currentTimeFrameStart) {
                 return $timestamp >= $currentTimeFrameStart;
             }
@@ -75,5 +80,14 @@ class RateLimiter
         }
 
         return 1000;
+    }
+
+    private function getStore(RequestInterface $request, array $options)
+    {
+        if (is_callable($this->store)) {
+            return ($this->store)($request, $options);
+        } else {
+            return $this->store;
+        }
     }
 }
